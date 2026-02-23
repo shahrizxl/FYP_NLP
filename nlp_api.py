@@ -385,48 +385,63 @@ def lemmatize(text: str) -> List[str]:
 def _normalize_thousands_commas(text: str) -> str:
     return re.sub(r'(?<=\d),(?=\d)', '', text)
 
+NUM_WORDS = set("""
+zero one two three four five six seven eight nine ten
+eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen
+twenty thirty forty fifty sixty seventy eighty ninety
+hundred thousand million billion
+and
+""".split())
+
+def _is_num_word(tok: str) -> bool:
+    tok = re.sub(r"[^a-z]", "", tok.lower())
+    return tok in NUM_WORDS
+
 def _words_to_numbers(text: str) -> str:
     """
-    Convert number words to digits:
-    'five' -> '5', 'twenty one' -> '21'
-    Only converts when it looks like money context.
+    Converts any contiguous number-word phrase anywhere in the sentence into digits.
+    Examples:
+      "spent five on food" -> "spent 5 on food"
+      "grab two hundred and ten" -> "grab 210"
+      "i got three thousand five hundred" -> "i got 3500"
     """
     if not text:
         return text
 
-    t = text.lower()
+    # normalize currency words (optional)
+    t = re.sub(r"\b(ringgit|myr)\b", "rm", text.lower())
 
-    # Convert common money phrases into something your regex can catch
-    # Examples: "five ringgit" -> "rm 5", "five bucks" -> "rm 5"
-    t = re.sub(r"\b(ringgit|bucks|buck)\b", "rm", t)
+    tokens = t.split()
+    out = []
+    i = 0
 
-    # We convert in a safe way: only attempt conversion on chunks near rm
-    # e.g. "rm five", "five rm"
-    patterns = [
-        r"\brm\s+([a-z\s-]+)\b",
-        r"\b([a-z\s-]+)\s+rm\b",
-    ]
+    while i < len(tokens):
+        if not _is_num_word(tokens[i]):
+            out.append(tokens[i])
+            i += 1
+            continue
 
-    def convert_chunk(m):
-        chunk = m.group(1).strip()
-        # keep only letters/spaces/hyphen
-        chunk = re.sub(r"[^a-z\s-]", "", chunk).strip()
-        if not chunk:
-            return m.group(0)
+        # build the longest possible number phrase from here
+        j = i
+        phrase_tokens = []
+        while j < len(tokens) and _is_num_word(tokens[j]):
+            phrase_tokens.append(tokens[j])
+            j += 1
+
+        phrase = " ".join(phrase_tokens)
+        phrase_clean = re.sub(r"[^a-z\s-]", " ", phrase)
+        phrase_clean = re.sub(r"\s+", " ", phrase_clean).strip()
+
         try:
-            num = w2n.word_to_num(chunk)
-            # rebuild text with rm + number
-            if m.group(0).startswith("rm"):
-                return f"rm {num}"
-            else:
-                return f"{num} rm"
+            val = w2n.word_to_num(phrase_clean)
+            out.append(str(val))
         except:
-            return m.group(0)
+            # if conversion fails, keep original tokens
+            out.extend(phrase_tokens)
 
-    for p in patterns:
-        t = re.sub(p, convert_chunk, t)
+        i = j
 
-    return t
+    return " ".join(out)
 
 # =========================
 # ✅ Improved amount extractor (keeps your logic + adds rm suffix, ringgit, k)
