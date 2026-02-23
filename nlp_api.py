@@ -2,6 +2,7 @@ import re
 from typing import List, Dict, Any
 import spacy
 from rapidfuzz import fuzz, process
+from word2number import w2n
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -384,6 +385,48 @@ def lemmatize(text: str) -> List[str]:
 def _normalize_thousands_commas(text: str) -> str:
     return re.sub(r'(?<=\d),(?=\d)', '', text)
 
+def _words_to_numbers(text: str) -> str:
+    """
+    Convert number words to digits:
+    'five' -> '5', 'twenty one' -> '21'
+    Only converts when it looks like money context.
+    """
+    if not text:
+        return text
+
+    t = text.lower()
+
+    # Convert common money phrases into something your regex can catch
+    # Examples: "five ringgit" -> "rm 5", "five bucks" -> "rm 5"
+    t = re.sub(r"\b(ringgit|bucks|buck)\b", "rm", t)
+
+    # We convert in a safe way: only attempt conversion on chunks near rm
+    # e.g. "rm five", "five rm"
+    patterns = [
+        r"\brm\s+([a-z\s-]+)\b",
+        r"\b([a-z\s-]+)\s+rm\b",
+    ]
+
+    def convert_chunk(m):
+        chunk = m.group(1).strip()
+        # keep only letters/spaces/hyphen
+        chunk = re.sub(r"[^a-z\s-]", "", chunk).strip()
+        if not chunk:
+            return m.group(0)
+        try:
+            num = w2n.word_to_num(chunk)
+            # rebuild text with rm + number
+            if m.group(0).startswith("rm"):
+                return f"rm {num}"
+            else:
+                return f"{num} rm"
+        except:
+            return m.group(0)
+
+    for p in patterns:
+        t = re.sub(p, convert_chunk, t)
+
+    return t
 
 # =========================
 # ✅ Improved amount extractor (keeps your logic + adds rm suffix, ringgit, k)
@@ -396,6 +439,7 @@ def extract_amount(text: str) -> List[float]:
     t = t.replace("₨", " rm ").replace("myr", " rm ").replace("rm", " rm ").replace("ringgit", " rm ")
     t = t.replace("$", " rm ")
     t = _normalize_thousands_commas(t)
+    t = _words_to_numbers(t)
 
     matches = []
 
