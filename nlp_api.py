@@ -67,7 +67,7 @@ INCOME_KEYWORDS = [
     # --- Receiving verbs ---
     "receive", "received", "get", "got",
     "earn", "earned", "incoming", "credited",
-    "credit", "credited rm",
+    "credit", "credited rm", "income",  
 
     # --- Salary & wages ---
     "salary", "gaji", "wage", "payout", "payday",
