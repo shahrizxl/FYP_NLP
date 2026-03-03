@@ -608,7 +608,9 @@ def detect_category(text: str, transaction_type: str) -> str:
     txt = text.lower()
 
     if transaction_type != "income":
-        if re.search(r"\b(bil|bill)\b[\s\-_/:\.]*\b(air|water|elektrik|letrik|wifi|internet|tnb|unifi)\b", txt):
+        BILLS_WORDS = r"(air|water|elektrik|letrik|wifi|internet|tnb|unifi|maxis|digi|celcom|umobile|tm)"
+        if re.search(rf"\b(bil|bill)\b[\s\-_/:\.]*\b{BILLS_WORDS}\b", txt) or \
+        re.search(rf"\b{BILLS_WORDS}\b[\s\-_/:\.]*\b(bil|bill)\b", txt):
             return "bills"
 
     # Prefer income categories for income messages
