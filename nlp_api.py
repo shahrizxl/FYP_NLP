@@ -607,6 +607,10 @@ def detect_category(text: str, transaction_type: str) -> str:
     text_lemmas = lemmatize(text)
     txt = text.lower()
 
+    if transaction_type != "income":
+        if re.search(r"\b(bil|bill)\s*(air|elektrik|letrik|wifi|internet|tnb|unifi)\b", txt):
+            return "bills"
+
     # Prefer income categories for income messages
     if transaction_type == "income":
         possible = {"income": CATEGORIES["income"]}
@@ -615,6 +619,21 @@ def detect_category(text: str, transaction_type: str) -> str:
 
     # ✅ Phrase-first overrides (reduces "other" and wrong category)
     if transaction_type != "income":
+        if any(p in txt for p in [
+            "bil air", "bill air",
+            "bil elektrik", "bill elektrik",
+            "bil letrik", "bill letrik",
+            "bil tnb", "bill tnb",
+            "bil unifi", "bill unifi",
+            "bil wifi", "bill wifi",
+            "bil internet", "bill internet",
+            "bil maxis", "bill maxis",
+            "bil digi", "bill digi",
+            "bil celcom", "bill celcom",
+            "bil umobile", "bill umobile",
+            "bayar bil", "bayar bill",
+        ]):
+            return "bills"
         if any(p in txt for p in ["kedai makan", "mamak", "warung", "kopitiam", "gerai", "restoran"]):
             return "food"
         if any(p in txt for p in ["isi minyak", "ron95", "ron97", "petrol", "minyak", "diesel", "rfid", "smarttag"]):
