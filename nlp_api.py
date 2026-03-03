@@ -268,7 +268,8 @@ CATEGORIES = {
 
         "insurance", "insurance premium",
         "loan", "mortgage", "rent", "utilities",
-        "ptptn", "tax", "quit rent",
+        "ptptn", "tax", "quit rent", "indah water", "syabas", "air selangor",
+        
 
         # Streaming
         "spotify", "netflix", "disney", "youtube premium",
